@@ -13,9 +13,26 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  const url = event.request.url;
+
+  // Si la requête concerne les tuiles OSM, on les met en cache dynamiquement
+  if (url.startsWith("https://tile.openstreetmap.org/")) {
+    event.respondWith(
+      caches.open("osm-tiles").then((cache) =>
+        cache.match(event.request).then((response) => {
+          if (response) return response;
+          return fetch(event.request).then((networkResponse) => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        })
+      )
+    );
+    return;
+  }
+
+  // Sinon, comportement par défaut
   event.respondWith(
-    caches
-      .match(event.request)
-      .then((response) => response || fetch(event.request))
+    caches.match(event.request).then((response) => response || fetch(event.request))
   );
 });
