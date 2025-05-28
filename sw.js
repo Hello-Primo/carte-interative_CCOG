@@ -31,6 +31,22 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Si la requête concerne OpenRouteService, on met aussi en cache dynamiquement
+  if (url.startsWith("https://api.openrouteservice.org/")) {
+    event.respondWith(
+      caches.open("ors-routes").then((cache) =>
+        cache.match(event.request).then((response) => {
+          if (response) return response;
+          return fetch(event.request).then((networkResponse) => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        })
+      )
+    );
+    return;
+  }
+
   // Sinon, comportement par défaut
   event.respondWith(
     caches.match(event.request).then((response) => response || fetch(event.request))
