@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Carte interactive des collectes CCOG</title>
+    <meta name="description" content="Carte interactive des collectes de déchets de la Guyane Ouest (CCOG)">
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#1976d2" />
+  </head>
+  <body>
+    <div
+      style="
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px #0002;
+      "
+    >
+      <strong>Choisir une commune :</strong><br />
+      <select id="commune-select">
+        <option value="">-- Sélectionner --</option>
+        <option value="slm">Saint-Laurent-du-Maroni</option>
+        <!-- <option value="apatou" disabled>Apatou</option> -->
+        <!-- <option value="mana" disabled>Mana</option> -->
+        <!-- <option value="awala" disabled>Awala-Yalimapo</option> -->
+      </select>
+      <div style="margin-top: 8px">
+        <label
+          ><input type="checkbox" id="chk-points" checked /> Points & tracés
+          routiers</label
+        ><br />
+        <label
+          ><input type="checkbox" id="chk-encombrants" /> Dates collecte
+          encombrants</label
+        ><br />
+        <label
+          ><input type="checkbox" id="chk-verts" /> Dates collecte déchets
+          verts</label
+        >
+      </div>
+    </div>
+    <div id="my-map" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; min-height: 500px; z-index: 1;"></div>
+    <div
+      id="file-warning"
+      style="
+        display: none;
+        color: red;
+        font-weight: bold;
+        text-align: center;
+        margin: 10px 0;
+        position: relative;
+        z-index: 1001;
+      "
+    >
+      <!-- ATTENTION : Pour que la carte fonctionne (contours, routes, PWA), ouvrez
+      ce dossier avec un serveur local (http://), pas en file:// -->
+    </div>
+    <script>
+      if (location.protocol === "file:") {
+        document.getElementById("file-warning").style.display = "block";
+      }
+      const map = new L.Map("my-map").setView([5.5, -54.03], 7); // Vue générale sur l’ouest de la Guyane
+
+      // Fond de carte OpenStreetMap
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 22,
+      }).addTo(map);
+
+      // --- Contour précis de la ville de Saint-Laurent-du-Maroni (GeoJSON local, version détaillée) ---
+      const slmVilleGeojson = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            properties: { name: "Saint-Laurent-du-Maroni (ville)" },
+            geometry: {
+              type: "Polygon",
+              coordinates : [
+                [
+                  [
+                    -54.013837207389244,
+                    5.511957978505066
+                  ],
+                  [
+                    -54.012842422153,
+                    5.51096660075099
+                  ],
+                  [
+                    -54.02377595076858,
+                    5.511022232736451
+                  ],
+                  [
+                    -54.03489081783944,
+                    5.506260924274841
+                  ],
+                  [
+                    -54.05049117559348,
+                    5.477562254984889
+                  ],
+                  [
+                    -54.054330210999055,
+                    5.447195023824804
+                  ],
+                  [
+                    -54.01993273058761,
+                    5.438374723613649
+                  ],
+                  [
+                    -53.988108012433585,
+                    5.503401879396279
+                  ],
+                  [
+                    -54.013837207389244,
+                    5.511957978505066
+                  ]
+                ]
+              ],
+            },
+          },
+        ],
+      };
+
+      // --- Gestion des couches dynamiques ---
+      let communeLayer = null;
+      let routeLayers = [];
+      let sousSecteurMarkers = [];
+      let selectedCommune = null;
+
+      function clearCommune() {
+        if (communeLayer) {
+          map.removeLayer(communeLayer);
+          communeLayer = null;
+        }
+        routeLayers.forEach((l) => map.removeLayer(l));
+        routeLayers = [];
+        sousSecteurMarkers.forEach((m) => map.removeLayer(m));
+        sousSecteurMarkers = [];
+        selectedCommune = null;
+        // Ne jamais retirer guyaneLayer
+      }
+
+      function showCommune(commune) {
+        clearCommune();
+        if (!commune) return;
+        selectedCommune = commune;
+        if (commune === "slm") {
+          /*
+          // Utilisation de Nominatim pour récupérer automatiquement le boundary de la commune
+          fetch(
+            "https://nominatim.openstreetmap.org/search.php?city=Saint-Laurent-du-Maroni&country=France&polygon_geojson=1&format=jsonv2"
+          )
+            .then((response) => response.json())
+            .then((json) => {
+              if (json.length > 0 && json[0].geojson) {
+                communeLayer = L.geoJSON(json[0].geojson, {
+                  style: {
+                    color: "#1976d2",
+                    weight: 2, // plus fin
+                    fillOpacity: 0.03, // opacité plus faible
+                  },
+                }).addTo(map);
+                // Zoom plus serré sur la ville (zoom 13 ou 14)
+                map.fitBounds(communeLayer.getBounds(), { maxZoom: 14 });
+              }
+              addSousSecteurMarkersAndRoutes();
+              togglePointsAndRoutes();
+            })
+            .catch(() => {
+              // fallback : afficher le geojson local si l'API échoue
+              communeLayer = L.geoJSON(slmVilleGeojson, {
+                style: {
+                  color: "#1976d2",
+                  weight: 2, // plus fin
+                  fillOpacity: 0.03, // opacité plus faible
+                },
+              }).addTo(map);
+              // Zoom plus serré sur la ville (zoom 13 ou 14)
+              map.fitBounds(communeLayer.getBounds(), { maxZoom: 14 });
+              addSousSecteurMarkersAndRoutes();
+              togglePointsAndRoutes();
+            });
+          */
+          // Affichage du polygone local centré sur le centre-ville
+          communeLayer = L.geoJSON(slmVilleGeojson, {
+            style: {
+              color: "#1976d2",
+              weight: 2, // plus fin
+              fillOpacity: 0.03, // opacité plus faible
+            },
+          }).addTo(map);
+          map.fitBounds(communeLayer.getBounds(), { maxZoom: 14 });
+          addSousSecteurMarkersAndRoutes();
+          togglePointsAndRoutes();
+        }
+      }
+
+      function togglePointsAndRoutes() {
+        const show = document.getElementById("chk-points").checked;
+        // Afficher/masquer les routes
+        routeLayers.forEach((layer) => {
+          if (show) {
+            map.addLayer(layer);
+          } else {
+            map.removeLayer(layer);
+          }
+        });
+        // Afficher/masquer les marqueurs
+        sousSecteurMarkers.forEach((marker) => {
+          if (show) {
+            map.addLayer(marker);
+          } else {
+            map.removeLayer(marker);
+          }
+        });
+      }
+
+      function addSousSecteurMarkersAndRoutes() {
+        if (selectedCommune !== "slm") return;
+        const apiKey =
+          "5b3ce3597851110001cf62483abfcab827f04c11bd08909b3982092d";
+        sousZonesSLM.forEach((zone) => {
+          // Markers
+          zone.lieux.forEach((lieu) => {
+            const marker = L.marker(lieu.coord, {
+              icon: L.icon({
+                iconUrl:
+                  "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+                iconAnchor: [12, 41],
+              }),
+            }).addTo(map);
+            sousSecteurMarkers.push(marker);
+            marker.bindPopup(getPopupContentLieu(zone, lieu));
+            marker.on("popupopen", function () {
+              marker.setPopupContent(getPopupContentLieu(zone, lieu));
+            });
+          });
+          // Tracés routiers entre chaque lieu consécutif
+          for (let i = 0; i < zone.lieux.length - 1; i++) {
+            const from = zone.lieux[i].coord;
+            const to = zone.lieux[i + 1].coord;
+            fetch(
+              "https://api.openrouteservice.org/v2/directions/driving-car/geojson",
+              {
+                method: "POST",
+                headers: {
+                  Authorization: apiKey,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  coordinates: [
+                    [from[1], from[0]],
+                    [to[1], to[0]],
+                  ],
+                }),
+              }
+            )
+              .then((response) => response.json())
+              .then((data) => {
+                if (data && data.features && data.features[0]) {
+                  const route = L.geoJSON(data.features[0].geometry, {
+                    style: function () {
+                      return {
+                        color: "red",
+                        weight: 5,
+                        opacity: 0.3,
+                      };
+                    },
+                  }).addTo(map);
+                  // Forcer l’opacité à 0.3 même si Leaflet applique un style par défaut
+                  route.setStyle({ color: "red", weight: 5, opacity: 0.3 });
+                  routeLayers.push(route);
+                  // Appliquer l'état d'affichage selon la case (pour routes ajoutées dynamiquement)
+                  if (!document.getElementById("chk-points").checked) {
+                    map.removeLayer(route);
+                  }
+                }
+              })
+              .catch((err) => console.error("Erreur OpenRouteService:", err));
+          }
+        });
+      }
+
+      function getPopupContent(zone) {
+        const showEncombrants =
+          document.getElementById("chk-encombrants").checked;
+        const showVerts = document.getElementById("chk-verts").checked;
+        let html = `<b>Secteur ${
+          zone.name
+        }</b><br><b>Lieux :</b> ${zone.lieux.join(", ")}`;
+        if (showEncombrants && zone.collecte.encombrants) {
+          html += `<br><b>Collecte encombrants :</b> ${zone.collecte.encombrants}`;
+        }
+        if (showVerts && zone.collecte.verts) {
+          html += `<br><b>Collecte déchets verts :</b> ${zone.collecte.verts}`;
+        }
+        return html;
+      }
+
+      function getPopupContentLieu(zone, lieu) {
+        const showEncombrants =
+          document.getElementById("chk-encombrants").checked;
+        const showVerts = document.getElementById("chk-verts").checked;
+        let html = `<b>${lieu.nom}</b><br><b>Secteur :</b> ${zone.name}`;
+        if (showEncombrants && zone.collecte.encombrants) {
+          html += `<br><b>Collecte encombrants :</b> ${zone.collecte.encombrants}`;
+        }
+        if (showVerts && zone.collecte.verts) {
+          html += `<br><b>Collecte déchets verts :</b> ${zone.collecte.verts}`;
+        }
+        return html;
+      }
+
+      function updateMarkersPopups() {
+        if (!selectedCommune) return;
+        if (selectedCommune !== "slm") return;
+        let idx = 0;
+        sousZonesSLM.forEach((zone) => {
+          zone.lieux.forEach((lieu) => {
+            sousSecteurMarkers[idx].setPopupContent(
+              getPopupContentLieu(zone, lieu)
+            );
+            idx++;
+          });
+        });
+      }
+
+      // --- Données des sous-zones pour SLM (lieux <-> coordonnées) ---
+      const sousZonesSLM = [
+        {
+          name: "A1",
+          color: "red",
+          collecte: {
+            encombrants: "Mardi 02 Novembre (1er MARDI du mois)",
+            verts: "Mercredi 03 Novembre (1er MERCREDI du mois)",
+            opacity: 0.3,
+          },
+          lieux: [
+            { nom: "Chandon", coord: [5.504496155191266, -54.03048410030026] },
+            {
+              nom: "Les Cultures",
+              coord: [5.503562310807634, -54.028787351439064],
+            },
+            { nom: "Marinas", coord: [5.506649, -54.024784] },
+          ],
+        },
+        {
+          name: "A2",
+          color: "red",
+          collecte: {
+            encombrants: "Jeudi 04 Novembre (1er JEUDI du mois)",
+            verts: "Mercredi 03 Novembre (1er MERCREDI du mois)",
+            opacity: 0.3,
+          },
+          lieux: [
+            {
+              nom: "Schœlcher",
+              coord: [5.502044131975302, -54.030517911478825],
+            },
+            { nom: "Carnot", coord: [5.505123935309586, -54.02697642164512] },
+            // { nom: "Damas", coord: [5.156706, -54.3441923] },
+          ],
+        },
+        {
+          name: "B1",
+          color: "red",
+          collecte: {
+            encombrants: "Mardi 09 Novembre (2ème MARDI du mois)",
+            verts: "Mercredi 10 Novembre (2ème MERCREDI du mois)",
+            opacity: 0.3,
+          },
+          lieux: [
+            {
+              nom: "Rousseau",
+              coord: [5.501110244689081, -54.029903831636936],
+            },
+            {
+              nom: "Guynemer",
+              coord: [5.499579248740663, -54.032281946585684],
+            },
+            // { nom: "Marant", coord: [5.4988207, -54.0314916] },
+          ],
+        },
+        {
+          name: "B2",
+          color: "red",
+          collecte: {
+            encombrants: "Jeudi 11 Novembre (2ème JEUDI du mois)",
+            verts: "Mercredi 10 Novembre (2ème MERCREDI du mois)",
+            opacity: 0.3,
+          },
+          lieux: [
+            {
+              nom: "Symphorien",
+              coord: [5.476786516433601, -54.02984013124319],
+            },
+            // { nom: "Rivieerz", coord: [5.4988207, -54.0314916] },
+            {
+              nom: "Vill. Chinois",
+              coord: [5.499984365587829, -54.0333694758162],
+            },
+          ],
+        },
+        {
+          name: "C1",
+          color: "red",
+          collecte: {
+            encombrants: "Mardi 16 Novembre (3ème MARDI du mois)",
+            verts: "Mercredi 10 Novembre (2ème MERCREDI du mois)",
+            opacity: 0.3,
+          },
+          lieux: [
+            {
+              nom: "Les Rivages",
+              coord: [5.490289499999999, -54.03817959999999],
+            },
+            // { nom: "Rés. Du Maroni", coord: [5.483437, -54.043609] },
+            {
+              nom: "Haut Balaté",
+              coord: [5.482488342504767, -54.0422996619811],
+            },
+          ],
+        },
+        {
+          name: "C2",
+          color: "red",
+          collecte: {
+            encombrants: "Mardi 16 Novembre (3ème MARDI du mois)",
+            verts: "Mercredi 10 Novembre (2ème MERCREDI du mois)",
+            opacity: 0.3,
+          },
+          lieux: [
+            {
+              nom: "La Charbonnière",
+              coord: [5.490460354121421, -54.0382547330934],
+            },
+            // { nom: "Lot. Flamboyant", coord: [5.448194399999999, -54.0439454] },
+            {
+              nom: "Village Balaté",
+              coord: [5.490289499999999, -54.03817959999999],
+            },
+          ],
+        },
+        {
+          name: "C3",
+          color: "red",
+          collecte: {
+            encombrants: "Mercredi 17 Novembre (3ème MERCREDI du mois)",
+            verts: "Pas de collecte",
+            opacity: 0.3,
+          },
+          lieux: [
+            {
+              nom: "Village terre rouge",
+              coord: [5.448113948151249, -54.0431213971517],
+            },
+            {
+              nom: "V. Espérance",
+              coord: [5.490289499999999, -54.03817959999999],
+            },
+            // { nom: "V. Pierre", coord: [5.483437, -54.043609] },
+            // { nom: "V. St Jean", coord: [5.448194399999999, -54.0439454] },
+            // {
+            //   nom: "Route de St. Jean",
+            //   coord: [5.490289499999999, -54.03817959999999],
+            // },
+            // { nom: "Rés. Wachili", coord: [5.483437, -54.043609] },
+            // { nom: "Rés. Romie", coord: [5.448194399999999, -54.0439454] },
+            // { nom: "St. Jean", coord: [5.490289499999999, -54.03817959999999] },
+          ],
+        },
+        {
+          name: "C4",
+          color: "red",
+          collecte: {
+            encombrants: "Jeudi 18 Novembre (3ème JEUDI du mois)",
+            verts: "Mercredi 10 Novembre (2ème MERCREDI du mois)",
+            opacity: 0.3,
+          },
+          lieux: [
+            {
+              nom: "Lot. Moucaya",
+              coord: [5.48328,-54.04280],
+            },
+            {
+              nom: "Av. Ch. Colomb jusqu'à St Louis",
+              coord: [5.492455256531381, -54.031626164872655],
+            },
+          ],
+        },
+        {
+          name: "D1",
+          color: "red", // bleu foncé à la place du vert
+          collecte: {
+            encombrants: "Mardi 23 Novembre (4ème MARDI du mois)",
+            verts: "Mercredi 24 Novembre (4ème MERCREDI du mois)",
+            opacity: 0.3,
+          },
+          lieux: [
+            { nom: "Lac Bleu", coord: [5.4719438, -54.0352681] },
+            { nom: "Puits Gallot", coord: [5.4879696, -54.0297111] },
+            // { nom: "Les Hameaux", coord: [4.844566299999999, -52.3234264] },
+          ],
+        },
+        {
+          name: "D2",
+          color: "red", // bleu nuit à la place du vert foncé
+          collecte: {
+            encombrants: "Jeudi 25 Novembre (4ème JEUDI du mois)",
+            verts: "Mercredi 24 Novembre (4ème MERCREDI du mois)",
+            opacity: 0.3,
+          },
+          lieux: [
+            { nom: "Lot. Les Ecoles", coord: [5.4879696, -54.0297111] },
+            { nom: "Maryflore", coord: [5.4719438, -54.0352681] },
+            { nom: "Rte de St-Maurice", coord: [5.4879696, -54.0297111] },
+            { nom: "Amapa 1 et 3", coord: [5.4856825, -54.0181574] },
+            { nom: "Lac Bleu", coord: [5.4719438, -54.0352681] },
+          ],
+        },
+      ];
+
+      // --- Gestion des événements ---
+      document.getElementById("commune-select").onchange = (e) => {
+        // Réinitialiser les checklists
+        document.getElementById("chk-points").checked = !!e.target.value;
+        document.getElementById("chk-encombrants").checked = false;
+        document.getElementById("chk-verts").checked = false;
+        showCommune(e.target.value);
+      };
+      document.getElementById("chk-points").onchange = togglePointsAndRoutes;
+      document.getElementById("chk-encombrants").onchange = updateMarkersPopups;
+      document.getElementById("chk-verts").onchange = updateMarkersPopups;
+
+      // Affichage initial : Guyane seulement
+      clearCommune();
+
+      // Suppression de la géolocalisation automatique et du marker "Vous êtes ici"
+    </script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        if (location.protocol !== "file:") {
+          navigator.serviceWorker.register("sw.js");
+        }
+      }
+    </script>
+    <script>
+      // AVERTISSEMENT :
+      // Pour éviter les erreurs CORS et Service Worker, ouvrez ce fichier via un serveur local (ex : http-server, python -m http.server, etc.)
+      // L'ouverture en file:// NE FONCTIONNERA PAS pour les API ni le mode offline PWA.
+    </script>
+  </body>
+</html>
