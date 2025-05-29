@@ -1,52 +1,68 @@
-# Carte Interactive CCOG (Next.js)
+# Carte Interactive CCOG
 
-Ce projet est une migration de la carte interactive CCOG vers Next.js avec support PWA, Leaflet (via react-leaflet), Tailwind CSS et interface en français.
+Application Next.js (React) pour visualiser les points et dates de collecte des déchets de la Guyane Ouest (CCOG), avec carte interactive (Leaflet), interface en français, et support PWA.
 
-## Fonctionnalités prévues
+## Fonctionnalités
 
-- Carte interactive Leaflet (OpenStreetMap)
-- Sélection de commune et filtres
-- Affichage des points et tracés routiers
-- Support PWA (offline, installation)
-- UI moderne avec Tailwind CSS
+- **Carte interactive** avec [react-leaflet](https://react-leaflet.js.org/) (OpenStreetMap)
+- **Affichage des points de collecte** et tracés routiers par commune
+- **Filtres dynamiques** (points, encombrants, déchets verts)
+- **Interface moderne** avec Tailwind CSS
+- **PWA** (Progressive Web App) : installable, offline partiel (cache dynamique)
+- **Manifest PWA** conforme (icônes, screenshots, shortcuts)
+- **Déploiement Vercel** prêt à l’emploi
 
-## Démarrage
+## Installation
 
-Pour démarrer le serveur de développement, utilisez l'une des commandes suivantes :
+```bash
+git clone https://github.com/Hello-Primo/carte-interative_CCOG.git
+cd carte-interactive-ccog
+npm install
+```
+
+## Développement local
 
 ```bash
 npm run dev
-# ou
-yarn dev
-# ou
-pnpm dev
-# ou
-bun dev
 ```
 
-Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur pour voir le résultat.
+L’application sera disponible sur [http://localhost:3000](http://localhost:3000).
 
-Vous pouvez commencer à modifier la page en modifiant `app/page.js`. La page se met à jour automatiquement lorsque vous modifiez le fichier.
+## Build & export statique
 
-Ce projet utilise [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) pour optimiser et charger automatiquement la police [Geist](https://vercel.com/font), une nouvelle famille de polices pour Vercel.
+```bash
+npm run build
+npm run export
+```
 
-## À faire
+Les fichiers statiques seront dans le dossier `out/` (pour déploiement GitHub Pages, Netlify, etc.).
 
-- Intégrer la carte et la logique métier dans `src/app/page.js`
-- Ajouter le manifest et le service worker dans `public/`
-- Adapter la logique JS existante en React/Next.js
+## Déploiement Vercel
 
-## En savoir plus
+1. Poussez votre repo sur GitHub.
+2. Connectez-le à [Vercel](https://vercel.com/).
+3. Vercel détecte Next.js et déploie automatiquement.
 
-Pour en savoir plus sur Next.js, consultez les ressources suivantes :
+## PWA (Progressive Web App)
 
-- [Documentation Next.js](https://nextjs.org/docs) - découvrez les fonctionnalités et l'API de Next.js.
-- [Apprendre Next.js](https://nextjs.org/learn) - un tutoriel interactif sur Next.js.
+- Icônes PWA : `public/icon-192.png` et `public/icon-512.png`
+- Screenshot PWA : `public/screenshot-1440x900.jpg`
+- Manifest conforme : `public/manifest.json`
+- Service worker : `public/service-worker.js` (cache dynamique des tuiles OSM déjà visitées)
 
-Vous pouvez consulter [le dépôt GitHub de Next.js](https://github.com/vercel/next.js) - vos retours et contributions sont les bienvenus !
+**Limite offline** : seules les tuiles de carte déjà visitées en ligne sont accessibles hors connexion (limite technique et licence OSM).
 
-## Déployer sur Vercel
+## Personnalisation
 
-Le moyen le plus simple de déployer votre application Next.js est d'utiliser la [plateforme Vercel](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) des créateurs de Next.js.
+- **Ajoutez vos propres points/zones** dans les fichiers de données (ex : `src/app/sousZonesSLM.js`)
+- **Modifiez l’UI** dans `src/app/CarteInteractive.js`
+- **Changez les couleurs/typographie** via Tailwind CSS (`globals.css`)
 
-Consultez notre [documentation sur le déploiement Next.js](https://nextjs.org/docs/app/building-your-application/deploying) pour plus de détails.
+## Dépendances principales
+
+- [Next.js](https://nextjs.org/)
+- [React](https://react.dev/)
+- [react-leaflet](https://react-leaflet.js.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [next-pwa](https://github.com/shadowwalker/next-pwa) (optionnel selon config)
+- [PWA Builder Studio](https://www.pwabuilder.com/) (pour le manifest/service worker)
