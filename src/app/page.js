@@ -3,14 +3,6 @@ import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import L from "leaflet";
 
-// Correction de l'icône par défaut de Leaflet (problème Next.js/React-Leaflet)
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x.src ?? markerIcon2x,
-  iconUrl: markerIcon.src ?? markerIcon,
-  shadowUrl: markerShadow.src ?? markerShadow,
-});
-
 const MapContainer = dynamic(
   () => import("react-leaflet").then((mod) => mod.MapContainer),
   { ssr: false }
@@ -86,20 +78,26 @@ export default function Home() {
   useEffect(() => {
     // Patch Leaflet marker icons côté client uniquement
     if (typeof window !== "undefined") {
-      import("leaflet").then((L) => {
-        import("leaflet/dist/images/marker-icon-2x.png").then((markerIcon2x) => {
-          import("leaflet/dist/images/marker-icon.png").then((markerIcon) => {
-            import("leaflet/dist/images/marker-shadow.png").then((markerShadow) => {
-              delete L.Icon.Default.prototype._getIconUrl;
-              L.Icon.Default.mergeOptions({
-                iconRetinaUrl: markerIcon2x.default,
-                iconUrl: markerIcon.default,
-                shadowUrl: markerShadow.default,
-              });
-            });
-          });
+      const setupIcons = async () => {
+        const markerIcon2x = await import(
+          "leaflet/dist/images/marker-icon-2x.png"
+        );
+        const markerIcon = await import(
+          "leaflet/dist/images/marker-icon.png"
+        );
+        const markerShadow = await import(
+          "leaflet/dist/images/marker-shadow.png"
+        );
+
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: markerIcon2x.default,
+          iconUrl: markerIcon.default,
+          shadowUrl: markerShadow.default,
         });
-      });
+      };
+
+      setupIcons();
     }
   }, []);
 
