@@ -10,23 +10,23 @@
   "lang": "fr",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/next.svg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/next.svg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any"
     }
   ],
   "screenshots": [
     {
-      "src": "/screenshot1.png",
+      "src": "/window.svg",
       "sizes": "1440x900",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "label": "Accueil"
     }
   ],
@@ -47,8 +47,9 @@
       "url": "/",
       "icons": [
         {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
+          "src": "/next.svg",
+          "sizes": "192x192",
+          "type": "image/svg+xml"
         }
       ]
     }
