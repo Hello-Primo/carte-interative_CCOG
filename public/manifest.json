@@ -25,7 +25,14 @@
       "src": "/screenshot-1440x900.jpg",
       "sizes": "1440x900",
       "type": "image/jpeg",
-      "label": "Accueil"
+      "label": "Accueil",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot-1440x900.jpg",
+      "sizes": "1440x900",
+      "type": "image/jpeg",
+      "label": "Accueil mobile"
     }
   ],
   "shortcuts": [
