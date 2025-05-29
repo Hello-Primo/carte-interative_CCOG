@@ -101,20 +101,20 @@ export default function CarteInteractive() {
   return (
     <div className="w-full h-screen relative bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* UI flottante */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 p-6 rounded-2xl shadow-2xl min-w-[300px] border border-blue-200 backdrop-blur-md">
-        <strong className="text-black text-lg font-semibold tracking-wide">
+      <div className="absolute top-6 right-8 z-[1000] bg-white/95 p-4 rounded-xl shadow-xl min-w-[220px] max-w-[270px] border border-blue-200 backdrop-blur-md">
+        <strong className="text-black text-base font-semibold tracking-wide">
           Choisir une commune :
         </strong>
         <select
-          className="block w-full mt-3 mb-4 border border-blue-200 rounded-lg px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
+          className="block w-full mt-2 mb-3 border border-blue-200 rounded px-2 py-1 text-black bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none transition text-sm"
           value={commune}
           onChange={(e) => setCommune(e.target.value)}
         >
           <option value="">-- Sélectionner --</option>
           <option value="slm">Saint-Laurent-du-Maroni</option>
         </select>
-        <div className="mt-3 space-y-2">
-          <label className="flex items-center gap-2 text-black text-base cursor-pointer select-none">
+        <div className="mt-2 space-y-1">
+          <label className="flex items-center gap-2 text-black text-sm cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showPoints}
@@ -124,7 +124,7 @@ export default function CarteInteractive() {
             />
             <span>Points & tracés routiers</span>
           </label>
-          <label className="flex items-center gap-2 text-black text-base cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-black text-sm cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showEncombrants}
@@ -134,7 +134,7 @@ export default function CarteInteractive() {
             />
             <span>Dates collecte encombrants</span>
           </label>
-          <label className="flex items-center gap-2 text-black text-base cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-black text-sm cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showVerts}
