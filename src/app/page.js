@@ -82,6 +82,7 @@ export default function Home() {
   const [showPoints, setShowPoints] = useState(false);
   const [showEncombrants, setShowEncombrants] = useState(false);
   const [showVerts, setShowVerts] = useState(false);
+  const [routesData, setRoutesData] = useState({});
 
   useEffect(() => {
     // Patch Leaflet marker icons côté client uniquement
@@ -102,6 +103,52 @@ export default function Home() {
       });
     }
   }, []);
+
+  useEffect(() => {
+    const orsApiKey = process.env.NEXT_PUBLIC_ORS_API_KEY;
+    if (!showPoints || selectedCommune !== "slm") {
+      return setRoutesData({});
+    }
+    if (!orsApiKey) return;
+
+    let cancelled = false;
+    const fetchRoutes = async () => {
+      try {
+        const results = await Promise.all(
+          sousZonesSLM.map((zone) =>
+            fetch(
+              "https://api.openrouteservice.org/v2/directions/driving-car/geojson",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: orsApiKey,
+                },
+                body: JSON.stringify({
+                  coordinates: zone.lieux.map((l) => [l.coord[1], l.coord[0]]),
+                }),
+              }
+            ).then((res) => (res.ok ? res.json() : null))
+          )
+        );
+        if (!cancelled) {
+          const obj = {};
+          results.forEach((geo, idx) => {
+            if (geo) obj[sousZonesSLM[idx].name] = geo;
+          });
+          setRoutesData(obj);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchRoutes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showPoints, selectedCommune]);
 
   // Centrage initial sur la Guyane Ouest
   const center = [5.5, -54.03];
@@ -204,6 +251,19 @@ export default function Home() {
                 </Marker>
               ))
           )}
+        {showPoints &&
+          selectedCommune === "slm" &&
+          Object.entries(routesData).map(([name, geo]) => (
+            <GeoJSON
+              key={`route-${name}`}
+              data={geo}
+              style={{
+                color:
+                  sousZonesSLM.find((z) => z.name === name)?.color || "#1976d2",
+                weight: 3,
+              }}
+            />
+          ))}
       </MapContainer>
     </main>
   );
