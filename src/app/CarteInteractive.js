@@ -99,45 +99,50 @@ export default function CarteInteractive() {
   }
 
   return (
-    <div className="w-full h-screen relative">
+    <div className="w-full h-screen relative bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* UI flottante */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white p-4 rounded-lg shadow-lg min-w-[260px]">
-        <strong className="text-black">Choisir une commune :</strong>
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 p-6 rounded-2xl shadow-2xl min-w-[300px] border border-blue-200 backdrop-blur-md">
+        <strong className="text-black text-lg font-semibold tracking-wide">
+          Choisir une commune :
+        </strong>
         <select
-          className="block w-full mt-1 mb-2 border rounded px-2 py-1 text-black bg-white"
+          className="block w-full mt-3 mb-4 border border-blue-200 rounded-lg px-3 py-2 text-black bg-white focus:ring-2 focus:ring-blue-400 focus:outline-none transition"
           value={commune}
           onChange={(e) => setCommune(e.target.value)}
         >
           <option value="">-- Sélectionner --</option>
           <option value="slm">Saint-Laurent-du-Maroni</option>
         </select>
-        <div className="mt-2">
-          <label className="block text-black">
+        <div className="mt-3 space-y-2">
+          <label className="flex items-center gap-2 text-black text-base cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showPoints}
               onChange={() => setShowPoints((v) => !v)}
               disabled={!commune}
+              className="accent-blue-600 w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-blue-400"
             />
-            <span className="ml-2">Points & tracés routiers</span>
+            <span>Points & tracés routiers</span>
           </label>
-          <label className="block text-black">
+          <label className="flex items-center gap-2 text-black text-base cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showEncombrants}
               onChange={() => setShowEncombrants((v) => !v)}
               disabled={!commune}
+              className="accent-green-600 w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-green-400"
             />
-            <span className="ml-2">Dates collecte encombrants</span>
+            <span>Dates collecte encombrants</span>
           </label>
-          <label className="block text-black">
+          <label className="flex items-center gap-2 text-black text-base cursor-pointer select-none">
             <input
               type="checkbox"
               checked={showVerts}
               onChange={() => setShowVerts((v) => !v)}
               disabled={!commune}
+              className="accent-lime-600 w-4 h-4 rounded border-gray-300 focus:ring-2 focus:ring-lime-400"
             />
-            <span className="ml-2">Dates collecte déchets verts</span>
+            <span>Dates collecte déchets verts</span>
           </label>
         </div>
       </div>
@@ -146,7 +151,7 @@ export default function CarteInteractive() {
         center={positionGuyane}
         zoom={7}
         scrollWheelZoom
-        className="w-full h-screen z-0"
+        className="w-full h-screen z-0 rounded-xl shadow-xl border border-blue-100"
         style={{ minHeight: 500 }}
       >
         <TileLayer
